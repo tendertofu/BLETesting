@@ -36,24 +36,11 @@ class SensorValues (val byteArray: ByteArray) {
         """.trimIndent()
     }
 
-    fun twoBytesToDecimal(byteArray: ByteArray): Int {
-        if (byteArray.size != 2) {
-            throw IllegalArgumentException("Input byte array must have exactly 2 elements.")
-        }
-
-        // Assuming unsigned bytes for simplicity
-        return (byteArray[0].toInt() shl 8) or byteArray[1].toInt()
-    }
-
-    fun byteArrayFrom2(byte1: Byte, byte2: Byte): ByteArray{
-        val byteArray = ByteArray(2)
-        byteArray[1]=byte1
-        byteArray[0]= byte2
-        return  byteArray
-    }
     fun getParameterValue(parameterPosition: Int): Int{
         //This function returns the parameter in the byteArray returned by the
         //sensor based its position (parameterPosition)
+        //The parameter values returned by tyhe BLE device are encoded
+        //in two bytes.
         val index = parameterPosition*2
         return (byteArray[index].toInt() * 256) + (byteArray[index+1]).toInt()
     }
