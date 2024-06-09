@@ -170,35 +170,18 @@ class MainActivity : ComponentActivity() {
                     characteristic: BluetoothGattCharacteristic,
                     status: Int
                 ) {
-                    if (characteristic == targetCharacteristic) {
-                        val sensorValues = SensorValues(targetCharacteristic.value)
+                    if (characteristic == responseCharacteristic) {
+                       /* val sensorValues = SensorValues(targetCharacteristic.value)
                         listOfSensorValues.add(sensorValues)
                         runOnUiThread(Runnable {
                             contentShowListOfSensorValues(listOfSensorValues = listOfSensorValues) {
                                 gatt.readCharacteristic(targetCharacteristic)
                             }
-                        })
+                        }) */
+                        val fullResponse=characteristic.value.take(7)
+                        responseValue=fullResponse.toByteArray()
                     }
                 }
-
-               /* override fun onCharacteristicChanged(
-                    gatt: BluetoothGatt,
-                    characteristic: BluetoothGattCharacteristic,
-                    value: ByteArray
-                ) {
-                    //super.onCharacteristicChanged(gatt, characteristic, value)
-                    onCharacteristicChanged_detected=true
-                    if (characteristic.uuid == uuidRead) {
-                        responseValue=characteristic.value
-                        runOnUiThread(Runnable {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "Response: " + characteristic.value.toString(),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        })
-                    }
-                } */
 
                 override fun onCharacteristicChanged(
                     gatt: BluetoothGatt,
@@ -208,8 +191,9 @@ class MainActivity : ComponentActivity() {
 
                     if (characteristic.uuid == uuidRead) {
                         onCharacteristicChanged_detected=true
+                        gatt.readCharacteristic(characteristic)
 
-                        val fullResponse=characteristic.value.take(7)
+                      /*  val fullResponse=characteristic.value.take(7)
                         responseValue=fullResponse.toByteArray()
                         runOnUiThread(Runnable {
                             Toast.makeText(
@@ -217,7 +201,7 @@ class MainActivity : ComponentActivity() {
                                 "Response: " + characteristic.value.toString(),
                                 Toast.LENGTH_SHORT
                             ).show()
-                        })
+                        }) */
                     }
                 }
 
@@ -421,7 +405,8 @@ fun scanLeDevice() {
 
     @SuppressLint("MissingPermission")
     fun writeToCharacteristic(){
-        val queryValue = "01030015000195CE".decodeHex()
+        val queryValue = "01030015000195CE".decodeHex()  //correct
+        //val queryValue = "01030015000195AA.decodeHex()"  //invalid crc
         interrogationCharacteristic.setValue(queryValue)
         var success = gatt.writeCharacteristic(interrogationCharacteristic)
     }
