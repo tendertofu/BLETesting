@@ -10,10 +10,13 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -37,8 +40,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.farmistand.bletesting.ui.theme.BLETestingTheme
+import java.util.UUID
 
-const val TARGET_UUID = "82816da6"  //first few characters of UUID needed
+const val TARGET_UUID = "5569"  //first few characters of UUID needed (the write characteristic)
 
 class MainActivity : ComponentActivity() {
     private lateinit var bluetoothAdapter: BluetoothAdapter
@@ -53,6 +57,17 @@ class MainActivity : ComponentActivity() {
     private lateinit var gatt: BluetoothGatt
     private lateinit var targetCharacteristic: BluetoothGattCharacteristic
     private var listOfSensorValues = mutableListOf<SensorValues>()
+    private val uuidPrimaryService: UUID = UUID.fromString("b007f7f2-8507-4c59-bdae-0d113792909a")
+    private val uuidRead: UUID = UUID.fromString( "82816da6-5648-4dd8-8c8f-ba1e184e8bb9")
+    private val uuidWrite: UUID = UUID.fromString("0e7a55b6-f1c4-40c4-89d8-c3f701ce5569")
+    private lateinit var responseCharacteristic: BluetoothGattCharacteristic
+    private lateinit var interrogationCharacteristic: BluetoothGattCharacteristic
+    private  var gotInterrogationCharac: Boolean = false
+    private  var gotResponseCharac: Boolean = false
+    private  var onCharacteristicChanged_detected: Boolean = false
+    private lateinit var responseValue: ByteArray
+
+    //private lateinit var bleDevices: ArrayList<ScanResult>
 
     //private val leDeviceListAdapter = LeDeviceListAdapter()
 
@@ -109,6 +124,7 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, "Bluetooth not supported", Toast.LENGTH_SHORT).show()
         }
 
+        //bleDevices = ArrayList()
         bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
 
         //scanLeDevice()
@@ -165,12 +181,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                /*
-                override fun onCharacteristicChanged(
+               /* override fun onCharacteristicChanged(
                     gatt: BluetoothGatt,
-                    characteristic: BluetoothGattCharacteristic
+                    characteristic: BluetoothGattCharacteristic,
+                    value: ByteArray
                 ) {
-                    if (characteristic == targetCharacteristic) {
+                    //super.onCharacteristicChanged(gatt, characteristic, value)
+                    onCharacteristicChanged_detected=true
+                    if (characteristic.uuid == uuidRead) {
+                        responseValue=characteristic.value
                         runOnUiThread(Runnable {
                             Toast.makeText(
                                 this@MainActivity,
@@ -179,9 +198,29 @@ class MainActivity : ComponentActivity() {
                             ).show()
                         })
                     }
+                } */
 
+                override fun onCharacteristicChanged(
+                    gatt: BluetoothGatt,
+                    characteristic: BluetoothGattCharacteristic
+                ) {
+                    super.onCharacteristicChanged(gatt,characteristic)
+
+                    if (characteristic.uuid == uuidRead) {
+                        onCharacteristicChanged_detected=true
+
+                        val fullResponse=characteristic.value.take(7)
+                        responseValue=fullResponse.toByteArray()
+                        runOnUiThread(Runnable {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Response: " + characteristic.value.toString(),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        })
+                    }
                 }
-                */
+
 
                 override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
                     if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -201,18 +240,24 @@ class MainActivity : ComponentActivity() {
                         services.forEach() {
                             val characteristics = it.characteristics
                             characteristics.forEach() { _charac ->
-                                if (_charac.uuid.toString()
-                                        .take(TARGET_UUID.length) == TARGET_UUID
-                                ) {
-                                    targetCharacteristic = _charac
-                                    gatt.readCharacteristic(targetCharacteristic)
-                                    /*  runOnUiThread(Runnable {
+                                if (_charac.uuid==uuidWrite) {
+                                    interrogationCharacteristic=_charac
+                                      runOnUiThread(Runnable {
                                           Toast.makeText(
                                               this@MainActivity,
-                                              "On Characteristic found: " + targetCharacteristic.value.toString(),
-                                              Toast.LENGTH_SHORT
+                                              "On Characteristic found: " + interrogationCharacteristic.service.toString(),
+                                              Toast.LENGTH_LONG
                                           ).show()
-                                      })*/
+                                      })
+                                }
+                                if(_charac.uuid == uuidRead){
+                                    //gotResponseCharac=true
+                                    responseCharacteristic = _charac
+                                    gatt.setCharacteristicNotification(responseCharacteristic, true)
+                                    val uuidString = "00002902-0000-1000-8000-00805F9B34FB"
+                                    val descriptor = responseCharacteristic.getDescriptor(UUID.fromString(uuidString))
+                                    descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                                    gatt.writeDescriptor(descriptor)
                                 }
                             }
                         }
@@ -222,19 +267,34 @@ class MainActivity : ComponentActivity() {
 
 
             })
+
+       /*     //PART WHERE WE WRITE TO CHARACTERISTICS
+            val primaryService = gatt.getService(uuidPrimaryService)
+            primaryService?.let {
+                interrogationCharacteristic = it.getCharacteristic(uuidWrite)
+                interrogationCharacteristic?.let {
+                    it.value = "01030012000125CA".decodeHex()
+                    gotInterrogationCharac = gatt.writeCharacteristic(it)
+                  /*  runOnUiThread(Runnable {
+                       Toast.makeText(this,"Success of write: $success",Toast.LENGTH_SHORT).show()
+                    }) */
+                }
+            }
+            */
+
+
         }
 
     }
 
     //Bluetooth related
-    /*
-@SuppressLint("MissingPermission")
+/*@SuppressLint("MissingPermission")
 fun scanLeDevice() {
     if (!scanning) { // Stops scanning after a pre-defined scan period.
         handler.postDelayed({
             scanning = false
             bluetoothLeScanner.stopScan(leScanCallback)
-            // Toast.makeText(this@MainActivity,"Number of devices: $deviceCounter", Toast.LENGTH_SHORT).show()
+             Toast.makeText(this@MainActivity,"Number of devices: ${bleDevices.size}", Toast.LENGTH_SHORT).show()
             //showResults()
         }, SCAN_PERIOD)
         scanning = true
@@ -243,8 +303,8 @@ fun scanLeDevice() {
         scanning = false
         bluetoothLeScanner.stopScan(leScanCallback)
     }
-}
-*/
+}*/
+
 
     @SuppressLint("MissingPermission")
     fun findMyDevice(pairedDevices: Set<BluetoothDevice>, nameOfDevice: String): BluetoothDevice? {
@@ -257,15 +317,17 @@ fun scanLeDevice() {
     }
 
 
-    /*
+
     // Device scan callback.
-    @SuppressLint("MissingPermission")
+ /*   @SuppressLint("MissingPermission")
     private val leScanCallback: ScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
+            if (!bleDevices.contains(result)) {
+                bleDevices.add(result)
+            }
             deviceCounter++
             if (result.device.name != null) {
-
                 listResult.add(result.device.name + " w bond state: " + (result.device.bondState == BluetoothDevice.BOND_BONDED))
                 //result.device.bondState.toString()
             }
@@ -273,8 +335,7 @@ fun scanLeDevice() {
             //leDeviceListAdapter.addDevice(result.device)
             //leDeviceListAdapter.notifyDataSetChanged()
         }
-    }
-    */
+    } */
 
     /*
     // Extension function to convert byte array to hex string
@@ -352,6 +413,52 @@ fun scanLeDevice() {
                 Log.d("test006", "${it.key} = ${it.value}")
             }
         }
+
+
+    fun examineAtBreak(){
+
+    }
+
+    @SuppressLint("MissingPermission")
+    fun writeToCharacteristic(){
+        val queryValue = "01030015000195CE".decodeHex()
+        interrogationCharacteristic.setValue(queryValue)
+        var success = gatt.writeCharacteristic(interrogationCharacteristic)
+    }
+    @Composable
+    fun showListOfSensorValues(listOfSensorValues: MutableList<SensorValues>, clickMe: () -> Unit) {
+        Column() {
+            Button(onClick = {
+                clickMe()
+            }
+            ) {
+                Text(text = "Get Reading", fontSize = 25.sp)
+            }
+            Button(onClick = {
+                examineAtBreak()
+            }
+            ) {
+                Text(text = "Break", fontSize = 25.sp)
+            }
+            Button(onClick = {
+                writeToCharacteristic()
+            }
+            ) {
+                Text(text = "Send Inquiry", fontSize = 25.sp)
+            }
+
+            LazyColumn() {
+                items(listOfSensorValues.size) { index ->
+                    Column {
+                        val reverseIndex=(listOfSensorValues.size-1)-index
+                        Text(text = "---------")
+                        Text(text = listOfSensorValues[reverseIndex].itemizedValues)
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 @Composable
@@ -374,7 +481,8 @@ fun showDevices(devicesList: MutableList<String>, counter: Int) {
     }
 }
 
-@Composable
+
+/*@Composable
 fun showListOfSensorValues(listOfSensorValues: MutableList<SensorValues>, clickMe: () -> Unit) {
     Column() {
         Button(onClick = {
@@ -394,7 +502,7 @@ fun showListOfSensorValues(listOfSensorValues: MutableList<SensorValues>, clickM
         }
     }
 }
-
+*/
 @Composable
 fun showWaitingForBleConnection(){
     Text(text="""
