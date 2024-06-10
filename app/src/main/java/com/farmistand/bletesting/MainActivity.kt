@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
 
     //private lateinit var leScanCallback: ScanCallback
     //private val bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
-    private lateinit var bluetoothLeScanner: BluetoothLeScanner
+    //private lateinit var bluetoothLeScanner: BluetoothLeScanner
     private var scanning = false
     private val handler = Handler()
     private val SCAN_PERIOD: Long = 10000
@@ -67,11 +67,7 @@ class MainActivity : ComponentActivity() {
     private  var onCharacteristicChanged_detected: Boolean = false
     private lateinit var responseValue: ByteArray
 
-    //private lateinit var bleDevices: ArrayList<ScanResult>
-
-    //private val leDeviceListAdapter = LeDeviceListAdapter()
-
-    var listResult = mutableListOf<String>()
+    //var listResult = mutableListOf<String>()
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -124,16 +120,7 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, "Bluetooth not supported", Toast.LENGTH_SHORT).show()
         }
 
-        //bleDevices = ArrayList()
-        bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
-
-        //scanLeDevice()
-
         val pairedDevices: Set<BluetoothDevice> = bluetoothAdapter.bondedDevices
-
-        /* for (pairedDevice in pairedDevices) {
-             listResult.add(pairedDevice.name)
-         }*/
 
         val devicex = findMyDevice(pairedDevices, "NPK")
 
@@ -171,13 +158,6 @@ class MainActivity : ComponentActivity() {
                     status: Int
                 ) {
                     if (characteristic == responseCharacteristic) {
-                       /* val sensorValues = SensorValues(targetCharacteristic.value)
-                        listOfSensorValues.add(sensorValues)
-                        runOnUiThread(Runnable {
-                            contentShowListOfSensorValues(listOfSensorValues = listOfSensorValues) {
-                                gatt.readCharacteristic(targetCharacteristic)
-                            }
-                        }) */
                         val fullResponse=characteristic.value.take(7)
                         responseValue=fullResponse.toByteArray()
                     }
@@ -191,35 +171,13 @@ class MainActivity : ComponentActivity() {
 
                     if (characteristic.uuid == uuidRead) {
                         onCharacteristicChanged_detected=true
-                        gatt.readCharacteristic(characteristic)
-
-                      /*  val fullResponse=characteristic.value.take(7)
-                        responseValue=fullResponse.toByteArray()
-                        runOnUiThread(Runnable {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "Response: " + characteristic.value.toString(),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }) */
+                        gatt.readCharacteristic(characteristic)  //The characteristic value will be captured in OnCharacteristicRead
                     }
                 }
 
 
                 override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
                     if (status == BluetoothGatt.GATT_SUCCESS) {
-                        /* // Interact with the BLE device
-                         val service = gatt.getService(UUID.fromString("Your Service UUID"))
-                         val characteristic = service.getCharacteristic(UUID.fromString("Your Characteristic UUID"))
-
-                         // Read from the characteristic
-                         gatt.readCharacteristic(characteristic)
-
-                         // Write to the characteristic
-                         val valueToWrite = byteArrayOf(0x01, 0x02) // Example data to write
-                         characteristic.setValue(valueToWrite)
-                         gatt.writeCharacteristic(characteristic)*/
-
                         val services = gatt.services
                         services.forEach() {
                             val characteristics = it.characteristics
@@ -245,50 +203,14 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
-                        //showResults()
+
                     }
                 }
-
-
             })
-
-       /*     //PART WHERE WE WRITE TO CHARACTERISTICS
-            val primaryService = gatt.getService(uuidPrimaryService)
-            primaryService?.let {
-                interrogationCharacteristic = it.getCharacteristic(uuidWrite)
-                interrogationCharacteristic?.let {
-                    it.value = "01030012000125CA".decodeHex()
-                    gotInterrogationCharac = gatt.writeCharacteristic(it)
-                  /*  runOnUiThread(Runnable {
-                       Toast.makeText(this,"Success of write: $success",Toast.LENGTH_SHORT).show()
-                    }) */
-                }
-            }
-            */
-
-
         }
-
     }
 
     //Bluetooth related
-/*@SuppressLint("MissingPermission")
-fun scanLeDevice() {
-    if (!scanning) { // Stops scanning after a pre-defined scan period.
-        handler.postDelayed({
-            scanning = false
-            bluetoothLeScanner.stopScan(leScanCallback)
-             Toast.makeText(this@MainActivity,"Number of devices: ${bleDevices.size}", Toast.LENGTH_SHORT).show()
-            //showResults()
-        }, SCAN_PERIOD)
-        scanning = true
-        bluetoothLeScanner.startScan(leScanCallback)
-    } else {
-        scanning = false
-        bluetoothLeScanner.stopScan(leScanCallback)
-    }
-}*/
-
 
     @SuppressLint("MissingPermission")
     fun findMyDevice(pairedDevices: Set<BluetoothDevice>, nameOfDevice: String): BluetoothDevice? {
@@ -299,45 +221,6 @@ fun scanLeDevice() {
         }
         return null
     }
-
-
-
-    // Device scan callback.
- /*   @SuppressLint("MissingPermission")
-    private val leScanCallback: ScanCallback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, result: ScanResult) {
-            super.onScanResult(callbackType, result)
-            if (!bleDevices.contains(result)) {
-                bleDevices.add(result)
-            }
-            deviceCounter++
-            if (result.device.name != null) {
-                listResult.add(result.device.name + " w bond state: " + (result.device.bondState == BluetoothDevice.BOND_BONDED))
-                //result.device.bondState.toString()
-            }
-
-            //leDeviceListAdapter.addDevice(result.device)
-            //leDeviceListAdapter.notifyDataSetChanged()
-        }
-    } */
-
-    /*
-    // Extension function to convert byte array to hex string
-    fun ByteArray.toHex(): String {
-        return joinToString("") { "%02x".format(it) }
-    }
-
-    private val hexArray = "0123456789ABCDEF".toCharArray()
-    fun bytesToHex(bytes: ByteArray): String {
-        val hexChars = CharArray(bytes.size * 2)
-        for (j in bytes.indices) {
-            val v = bytes[j].toInt() and 0xFF
-
-            hexChars[j * 2] = hexArray[v ushr 4]
-            hexChars[j * 2 + 1] = hexArray[v and 0x0F]
-        }
-        return String(hexChars)
-    } */
 
     //Show Composable
 
@@ -405,7 +288,7 @@ fun scanLeDevice() {
 
     @SuppressLint("MissingPermission")
     fun writeToCharacteristic(){
-        val queryValue = "01030015000195CE".decodeHex()  //correct
+        val queryValue = "010300120001240F".decodeHex()  //correct
         //val queryValue = "01030015000195AA.decodeHex()"  //invalid crc
         interrogationCharacteristic.setValue(queryValue)
         var success = gatt.writeCharacteristic(interrogationCharacteristic)

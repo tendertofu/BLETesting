@@ -1,5 +1,6 @@
 package com.farmistand.bletesting
 
+import java.math.BigInteger
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
@@ -28,3 +29,10 @@ fun String.decodeHex(): ByteArray {
 
 //returns a hex string from byte array
 fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
+
+//returns an integer from byte array using BigEndian
+fun ByteArray.toInt(): Int {
+    val bigInteger = BigInteger(this)
+    return bigInteger.toInt()
+}
+
