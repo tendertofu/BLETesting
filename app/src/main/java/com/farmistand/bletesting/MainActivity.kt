@@ -175,7 +175,7 @@ class MainActivity : ComponentActivity() {
                 Text(text = "Break", fontSize = 25.sp)
             }
             Button(onClick = {
-                writeToCharacteristic()
+               bLE.readSensorValues()
             }
             ) {
                 Text(text = "Send Inquiry", fontSize = 25.sp)
