@@ -6,47 +6,32 @@ package com.farmistand.bletesting
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCallback
-import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
-import android.bluetooth.BluetoothProfile
-import android.bluetooth.le.BluetoothLeScanner
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.farmistand.bletesting.ui.theme.BLETestingTheme
-import java.util.UUID
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
-const val TARGET_UUID = "5569"  //first few characters of UUID needed (the write characteristic)
+//const val TARGET_UUID = "5569"  //first few characters of UUID needed (the write characteristic)
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var bLE : BLE
+    private lateinit var jXCT : JXCT
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,7 +76,7 @@ class MainActivity : ComponentActivity() {
             requestBluetooth.launch(enableBtIntent)
         }
 
-        bLE = BLE(this,
+        jXCT = JXCT(this,
             {contentShowWaitingForBleConnection()},
             {contentShowButtonsTester()},
             { Toast.makeText(this, "Bluetooth not supported", Toast.LENGTH_SHORT).show()},
@@ -124,6 +109,11 @@ class MainActivity : ComponentActivity() {
             showDisconnection()
         }
     }
+    private fun contentShowSensorValues(sensorValues: SensorValues){
+        setContent{
+            showSensorValues(sensorValues = sensorValues)
+        }
+    }
 
     //Permissions
 
@@ -153,21 +143,13 @@ class MainActivity : ComponentActivity() {
 
         val queryValue = "010300120001240F".decodeHex()  //correct
         //val queryValue = "01030015000195AA.decodeHex()"  //invalid crc
-        bLE.interrogationCharacteristic.setValue(queryValue)
-        var success = bLE.gatt.writeCharacteristic(bLE.interrogationCharacteristic)
+        jXCT.interrogationCharacteristic.setValue(queryValue)
+        var success = jXCT.gatt.writeCharacteristic(jXCT.interrogationCharacteristic)
 
     }
     @Composable
     fun showButtonsTester() {
         Column() {
-            /*
-            Button(onClick = {
-                clickMe()
-            }
-            ) {
-                Text(text = "Get Reading", fontSize = 25.sp)
-            }
-            */
             Button(onClick = {
                 examineAtBreak()
             }
@@ -175,13 +157,32 @@ class MainActivity : ComponentActivity() {
                 Text(text = "Break", fontSize = 25.sp)
             }
             Button(onClick = {
-               bLE.readSensorValues()
+                GlobalScope.launch {
+                    val senValues = jXCT.readSensorValues()
+                    contentShowSensorValues(senValues)
+                }
+
             }
             ) {
                 Text(text = "Send Inquiry", fontSize = 25.sp)
             }
 
         }
+    }
+
+    @Composable
+    fun showSensorValues(sensorValues: SensorValues){
+
+        Column() {
+            Text ("PH: ${sensorValues.ph}", fontSize = 17.sp )
+            Text ("Moisture: ${sensorValues.moisture}", fontSize = 17.sp )
+            Text ("Temperature: ${sensorValues.temperature}", fontSize = 17.sp )
+            Text ("Conductivity: ${sensorValues.conductivity}", fontSize = 17.sp )
+            Text ("Nitrogen: ${sensorValues.nitrogen}", fontSize = 17.sp )
+            Text ("Phosphorus: ${sensorValues.phosphorus}" , fontSize = 17.sp )
+            Text ("Potassium: ${sensorValues.potassium}", fontSize = 17.sp )
+        }
+
     }
 
 }

@@ -8,10 +8,12 @@ import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 import java.util.UUID
 
-class BLE  {
+class JXCT  {
     private lateinit var bluetoothAdapter: BluetoothAdapter
     public lateinit var gatt: BluetoothGatt
     private val uuidRead: UUID = UUID.fromString( "82816da6-5648-4dd8-8c8f-ba1e184e8bb9")
@@ -150,37 +152,37 @@ class BLE  {
             CodeForResponse.PH ->{
                 sensorValues.ph = (byteArrayOf(response[3], response[4]).toInt())/100.0
                 currentWaiting = CodeForResponse.Moisture   //set for next response
-                interrogationCharacteristic.setValue(queryMaker("12"))  //request moisture
+                interrogationCharacteristic.setValue(queryMaker("12","01"))  //request moisture
                 gatt.writeCharacteristic(interrogationCharacteristic)
             }
             CodeForResponse.Moisture ->{
                 sensorValues.moisture = (byteArrayOf(response[3], response[4]).toInt())/10.0
                 currentWaiting = CodeForResponse.Temperature   //set for next response
-                interrogationCharacteristic.setValue(queryMaker("13"))  //request temperature
+                interrogationCharacteristic.setValue(queryMaker("13","01"))  //request temperature
                 gatt.writeCharacteristic(interrogationCharacteristic)
             }
             CodeForResponse.Temperature ->{
                 sensorValues.temperature = (byteArrayOf(response[3], response[4]).toInt())/10.0
                 currentWaiting = CodeForResponse.Conductivity   //set for next response
-                interrogationCharacteristic.setValue(queryMaker("15")) //request conductivity
+                interrogationCharacteristic.setValue(queryMaker("15","01")) //request conductivity
                 gatt.writeCharacteristic(interrogationCharacteristic)
             }
             CodeForResponse.Conductivity ->{
                 sensorValues.conductivity = (byteArrayOf(response[3], response[4]).toInt())/1.0
                 currentWaiting = CodeForResponse.Nitrogen   //set for next response
-                interrogationCharacteristic.setValue(queryMaker("1E")) //request nitrogen
+                interrogationCharacteristic.setValue(queryMaker("1E","01")) //request nitrogen
                 gatt.writeCharacteristic(interrogationCharacteristic)
             }
             CodeForResponse.Nitrogen ->{
                 sensorValues.nitrogen = (byteArrayOf(response[3], response[4]).toInt())/1.0
                 currentWaiting = CodeForResponse.Phosphorus  //set for next response
-                interrogationCharacteristic.setValue(queryMaker("1F")) //request phosphorus
+                interrogationCharacteristic.setValue(queryMaker("1F","01")) //request phosphorus
                 gatt.writeCharacteristic(interrogationCharacteristic)
             }
             CodeForResponse.Phosphorus ->{
                 sensorValues.phosphorus = (byteArrayOf(response[3], response[4]).toInt())/1.0
                 currentWaiting = CodeForResponse.Potassium   //set for next response
-                interrogationCharacteristic.setValue(queryMaker("20")) //request potassium
+                interrogationCharacteristic.setValue(queryMaker("20","01")) //request potassium
                 gatt.writeCharacteristic(interrogationCharacteristic)
             }
             CodeForResponse.Potassium ->{
@@ -190,13 +192,13 @@ class BLE  {
             }
         }
     }
-    public fun queryMaker(sensorCode: String): ByteArray{
+    public fun queryMaker(sensorCode: String, registerLength: String): ByteArray{
         //This function returns the byte array that should be written to the interrogatory characteristic
         //the input is the string representing the location of the statistic needed from sensor.  For example
         //moisture is 12 in hexadecimal so should be entered as "12" in the parameter
 
         //base = device (1 byte) + function (1 byte) + starting address (2 bytes) + register length (2 bytes)
-        var base = "010300"+sensorCode+"0001"   //always has a register length to be trieved of 1
+        var base = "010300"+sensorCode+"00" + registerLength   //always has a register length to be trieved of 1
         crc.reset()
         crc.calcCRC(base.decodeHex())
         val checkSum = crc.crcBytes
@@ -206,9 +208,32 @@ class BLE  {
     }
 
     @SuppressLint("MissingPermission")
-    public fun readSensorValues(){
-        currentWaiting= CodeForResponse.PH
-        interrogationCharacteristic.setValue(queryMaker("06"))  //request PH
+    suspend public fun readSensorValues() : SensorValues{
+        //This function waits for all the values from sensor to be read but not longer than
+        //timout which is set to five seconds.  It will return Sensor Values in the class
+        //SensorValue.  If timeout is exceeded, it will return sensorValues with whatever
+        //data has already be stored in there by parseResponse function
+
+        sensorValues=SensorValues()  //intialize so all values are set to zero
+        currentWaiting= CodeForResponse.PH   //set the first value to be read by parseResponse function
+        interrogationCharacteristic.setValue(queryMaker("06","01"))  //request PH
         gatt.writeCharacteristic(interrogationCharacteristic)
+
+        //The sequence of receiving response to the above query and then generating
+        //successive queries will be performed by parseResposne function but
+        //we need to wait for this to complete. It is complete when currentWaiting has
+        //a value of DONE
+
+        try {
+            withTimeout(60000) { // Specify the timeout duration in milliseconds
+                while (currentWaiting!=CodeForResponse.Done){
+                    // do nothing, just wait
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            //no need to do anything here although it's possible to throw exception
+        }
+        return sensorValues
     }
+
 }
