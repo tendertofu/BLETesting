@@ -14,14 +14,26 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.farmistand.bletesting.ui.theme.BLETestingTheme
 import kotlinx.coroutines.GlobalScope
@@ -149,22 +161,25 @@ class MainActivity : ComponentActivity() {
     }
     @Composable
     fun showButtonsTester() {
-        Column() {
-            Button(onClick = {
-                examineAtBreak()
-            }
-            ) {
-                Text(text = "Break", fontSize = 25.sp)
-            }
+        var showSpinner by remember { mutableStateOf(false) }
+        Column(  verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(10.dp)) {
             Button(onClick = {
                 GlobalScope.launch {
+                    showSpinner=true
                     val senValues = jXCT.readSensorValues()
                     contentShowSensorValues(senValues)
                 }
 
             }
             ) {
-                Text(text = "Send Inquiry", fontSize = 25.sp)
+                Text(text = "Read Sensor", fontSize = 25.sp)
+            }
+            if (showSpinner) {
+                Box(contentAlignment = Alignment.Center, modifier=Modifier.padding(15.dp)) {
+                    CircularProgressIndicator()
+                }
             }
 
         }
@@ -173,7 +188,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun showSensorValues(sensorValues: SensorValues){
 
-        Column() {
+        Column(modifier = Modifier.padding(10.dp)) {
             Text ("PH: ${sensorValues.ph}", fontSize = 17.sp )
             Text ("Moisture: ${sensorValues.moisture}", fontSize = 17.sp )
             Text ("Temperature: ${sensorValues.temperature}", fontSize = 17.sp )
@@ -181,6 +196,13 @@ class MainActivity : ComponentActivity() {
             Text ("Nitrogen: ${sensorValues.nitrogen}", fontSize = 17.sp )
             Text ("Phosphorus: ${sensorValues.phosphorus}" , fontSize = 17.sp )
             Text ("Potassium: ${sensorValues.potassium}", fontSize = 17.sp )
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(onClick = {
+               contentShowButtonsTester()
+            }
+            ) {
+                Text(text = "Go Back", fontSize = 17.sp)
+            }
         }
 
     }

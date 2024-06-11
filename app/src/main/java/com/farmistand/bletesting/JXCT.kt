@@ -78,9 +78,8 @@ class JXCT  {
                     status: Int
                 ) {
                     if (characteristic == responseCharacteristic) {
-                        //val fullResponse=characteristic.value.take(7)
-                        //responseValue=fullResponse.toByteArray()
-                        parseResponse(characteristic.value.take(7).toByteArray())
+                        //parseResponse(characteristic.value.take(7).toByteArray())  //maximum number of bytes
+                        parseResponse2(characteristic.value.take(13).toByteArray())  //maximum number of bytes
                     }
                 }
 
@@ -143,6 +142,8 @@ class JXCT  {
             public val Phosphorus = 60
             public val Potassium = 70
             public val Done = 80
+            public val Moisture_Temperature_Conductivity = 90
+            public val Nitrogen_Phosphorus_Potassium = 100
         }
     }
 
@@ -187,6 +188,35 @@ class JXCT  {
             }
             CodeForResponse.Potassium ->{
                 sensorValues.potassium = (byteArrayOf(response[3], response[4]).toInt())/1.0
+                currentWaiting = CodeForResponse.Done   //set for next response
+                //finised, no need to ask for another query
+            }
+        }
+    }
+    @SuppressLint("MissingPermission")
+    fun parseResponse2(response: ByteArray){
+        //This is much faster in retrieving data from sensor than parseResponse because
+        //it is able to obtain data which is adjacent in memory in one query
+        //instead of having to retrieve it through 7 individual queries
+        when (currentWaiting) {
+            CodeForResponse.PH ->{
+                sensorValues.ph = (byteArrayOf(response[3], response[4]).toInt())/100.0
+                currentWaiting = CodeForResponse.Moisture_Temperature_Conductivity   //set for next response
+                interrogationCharacteristic.setValue(queryMaker("12","04"))  //request moisture
+                gatt.writeCharacteristic(interrogationCharacteristic)
+            }
+            CodeForResponse.Moisture_Temperature_Conductivity ->{
+                sensorValues.moisture = (byteArrayOf(response[3], response[4]).toInt())/10.0
+                sensorValues.temperature = (byteArrayOf(response[5], response[6]).toInt())/10.0
+                sensorValues.conductivity = (byteArrayOf(response[9], response[10]).toInt())/1.0
+                currentWaiting = CodeForResponse.Nitrogen_Phosphorus_Potassium   //set for next response
+                interrogationCharacteristic.setValue(queryMaker("1E","03"))  //request temperature
+                gatt.writeCharacteristic(interrogationCharacteristic)
+            }
+            CodeForResponse.Nitrogen_Phosphorus_Potassium ->{
+                sensorValues.nitrogen = (byteArrayOf(response[3], response[4]).toInt())/1.0
+                sensorValues.phosphorus = (byteArrayOf(response[5], response[6]).toInt())/1.0
+                sensorValues.potassium = (byteArrayOf(response[7], response[8]).toInt())/1.0
                 currentWaiting = CodeForResponse.Done   //set for next response
                 //finised, no need to ask for another query
             }
