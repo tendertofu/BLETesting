@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -150,21 +151,14 @@ class MainActivity : ComponentActivity() {
 
     }
 
-    @SuppressLint("MissingPermission")
-    fun writeToCharacteristic(){
-
-        val queryValue = "010300120001240F".decodeHex()  //correct
-        //val queryValue = "01030015000195AA.decodeHex()"  //invalid crc
-        jXCT.interrogationCharacteristic.setValue(queryValue)
-        var success = jXCT.gatt.writeCharacteristic(jXCT.interrogationCharacteristic)
-
-    }
     @Composable
     fun showButtonsTester() {
         var showSpinner by remember { mutableStateOf(false) }
         Column(  verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(10.dp)) {
+            modifier = Modifier.padding(10.dp).fillMaxSize()) {
+            Text(text="BLE Tester", fontSize=25.sp)
+            Spacer(modifier = Modifier.height(20.dp))
             Button(onClick = {
                 GlobalScope.launch {
                     showSpinner=true
@@ -174,7 +168,7 @@ class MainActivity : ComponentActivity() {
 
             }
             ) {
-                Text(text = "Read Sensor", fontSize = 25.sp)
+                Text(text = "Read Sensor", fontSize = 20.sp)
             }
             if (showSpinner) {
                 Box(contentAlignment = Alignment.Center, modifier=Modifier.padding(15.dp)) {
@@ -189,13 +183,13 @@ class MainActivity : ComponentActivity() {
     fun showSensorValues(sensorValues: SensorValues){
 
         Column(modifier = Modifier.padding(10.dp)) {
-            Text ("PH: ${sensorValues.ph}", fontSize = 17.sp )
-            Text ("Moisture: ${sensorValues.moisture}", fontSize = 17.sp )
-            Text ("Temperature: ${sensorValues.temperature}", fontSize = 17.sp )
-            Text ("Conductivity: ${sensorValues.conductivity}", fontSize = 17.sp )
-            Text ("Nitrogen: ${sensorValues.nitrogen}", fontSize = 17.sp )
-            Text ("Phosphorus: ${sensorValues.phosphorus}" , fontSize = 17.sp )
-            Text ("Potassium: ${sensorValues.potassium}", fontSize = 17.sp )
+            Text ("PH: ${sensorValues.ph} (pH)", fontSize = 17.sp )
+            Text ("Moisture: ${sensorValues.moisture} (%RH)", fontSize = 17.sp )
+            Text ("Temperature: ${sensorValues.temperature} (C)", fontSize = 17.sp )
+            Text ("Conductivity: ${sensorValues.conductivity} (us/cm)", fontSize = 17.sp )
+            Text ("Nitrogen: ${sensorValues.nitrogen} (mg/kg)", fontSize = 17.sp )
+            Text ("Phosphorus: ${sensorValues.phosphorus} (mg/kg)" , fontSize = 17.sp )
+            Text ("Potassium: ${sensorValues.potassium} (mg/kg)" , fontSize = 17.sp )
             Spacer(modifier = Modifier.height(20.dp))
             Button(onClick = {
                contentShowButtonsTester()

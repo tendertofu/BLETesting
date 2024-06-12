@@ -25,6 +25,7 @@ class JXCT  {
     private var currentWaiting = 0
     public var sensorValues= SensorValues()
     val crc = CRC16Modbus()
+    public var macAddress:String = ""
 
 
     @SuppressLint("MissingPermission")
@@ -47,6 +48,7 @@ class JXCT  {
         val devicex = findMyDevice(pairedDevices, "NPK")
 
         if (devicex != null) {
+            macAddress = devicex.address
             // Connect to the device
             gatt = devicex.connectGatt(myMainActivity, false, object : BluetoothGattCallback()
             {
@@ -255,7 +257,7 @@ class JXCT  {
         //a value of DONE
 
         try {
-            withTimeout(60000) { // Specify the timeout duration in milliseconds
+            withTimeout(15000) { // Specify the timeout duration in milliseconds
                 while (currentWaiting!=CodeForResponse.Done){
                     // do nothing, just wait
                 }
